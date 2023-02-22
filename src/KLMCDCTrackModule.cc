@@ -1,11 +1,3 @@
-/**************************************************************************
- * basf2 (Belle II Analysis Software Framework)                           *
- * Author: The Belle II Collaboration                                     *
- *                                                                        *
- * See git log for contributors and copyright holders.                    *
- * This file is licensed under LGPL-3.0, see LICENSE.md.                  *
- **************************************************************************/
-
 /* Own header. */
 #include <klm/modules/KLMCDCTrack/KLMCDCTrackModule.h>
 
@@ -25,7 +17,11 @@ REG_MODULE(KLMCDCTrack);
 KLMCDCTrackModule::KLMCDCTrackModule() :
   HistoModule(),
   m_klmcdc_eta{nullptr},
-  m_klmcdc_theta{nullptr}
+  m_klmcdc_theta{nullptr},
+  m_klmcdc_phi{nullptr},
+  m_klmcdc_b_eta{nullptr},
+  m_klmcdc_b_theta{nullptr},
+  m_klmcdc_b_phi{nullptr}
   
 {
   setDescription("KLM data quality monitor.");
@@ -45,8 +41,8 @@ void KLMCDCTrackModule::defineHisto()
   TDirectory* newDirectory{gDirectory->mkdir(m_HistogramDirectoryName.c_str())};
   TDirectory::TContext context{gDirectory, newDirectory};
 
-  /* Number of hits by Eta. */
   /* KLM General Related. */
+  /* Number of hits by Eta. */
   m_klmcdc_eta = new TProfile("KLM_CDC_tracks_by_eta",
                                "Mean KLM Hits per CDC track vs. #eta",
                                300, -3.142, 3.142);
@@ -54,14 +50,41 @@ void KLMCDCTrackModule::defineHisto()
   m_klmcdc_eta->GetYaxis()->SetTitle("Mean hits (EKLM + BKLM)");
 
   /* Number of hits by Eta. */
-  /* KLM General Related. */
   m_klmcdc_theta = new TProfile("KLM_CDC_tracks_by_theta",
                                "Mean KLM Hits per CDC track vs. #theta",
                                300, -3.142, 3.142);
   m_klmcdc_theta->GetXaxis()->SetTitle("Angle #theta");
   m_klmcdc_theta->GetYaxis()->SetTitle("Mean hits (EKLM + BKLM)");
   
-  //m_klmcdc_eta->Draw("HIST");
+  
+  /* Number of hits by Phi. */
+  m_klmcdc_phi = new TProfile("KLM_CDC_tracks_by_phi",
+                               "Mean KLM Hits per CDC track vs. #phi",
+                               300, -3.142, 3.142);
+  m_klmcdc_phi->GetXaxis()->SetTitle("Angle #phi");
+  m_klmcdc_phi->GetYaxis()->SetTitle("Mean hits (EKLM + BKLM)");
+
+  /* JUST BKLM */
+  /* Number of BKLM hits by Eta. */
+  m_klmcdc_b_eta = new TProfile("BKLM_CDC_tracks_by_eta",
+                               "Mean BKLM Hits per CDC track vs. #eta",
+                               300, -3.142, 3.142);
+  m_klmcdc_b_eta->GetXaxis()->SetTitle("Angle #eta");
+  m_klmcdc_b_eta->GetYaxis()->SetTitle("Mean hits (BKLM)");
+
+  /* Number of BKLM hits by Eta. */
+  m_klmcdc_b_theta = new TProfile("BKLM_CDC_tracks_by_theta",
+                               "Mean BKLM Hits per CDC track vs. #theta",
+                               300, -3.142, 3.142);
+  m_klmcdc_b_theta->GetXaxis()->SetTitle("Angle #theta");
+  m_klmcdc_b_theta->GetYaxis()->SetTitle("Mean hits (BKLM)");
+  
+  /* Number of BKLM hits by Phi. */
+  m_klmcdc_b_phi = new TProfile("BKLM_CDC_tracks_by_phi",
+                               "Mean BKLM Hits per CDC track vs. #phi",
+                               300, -3.142, 3.142);
+  m_klmcdc_b_phi->GetXaxis()->SetTitle("Angle #phi");
+  m_klmcdc_b_phi->GetYaxis()->SetTitle("Mean hits (BKLM)");
 }
 
 void KLMCDCTrackModule::initialize()
@@ -73,11 +96,14 @@ void KLMCDCTrackModule::beginRun()
 {
   m_klmcdc_eta->Reset();
   m_klmcdc_theta->Reset();
+  m_klmcdc_phi->Reset();
+  m_klmcdc_b_eta->Reset();
+  m_klmcdc_b_theta->Reset();
+  m_klmcdc_b_phi->Reset();
 }
 
 void KLMCDCTrackModule::event()
 {
-  int trackCount = 0;
   for (const auto& b2track : m_Tracks) {
 
     // Make sure this is an actual track
@@ -86,42 +112,51 @@ void KLMCDCTrackModule::event()
       B2WARNING("No track fit result found.");
       continue;
     }
-
     Belle2::RecoTrack* track = b2track.getRelatedTo<Belle2::RecoTrack>(m_recoTrackArrayName);
     if (!track) {
       B2WARNING("Can not access RecoTrack of this Belle2::Track");
       continue;
     }
 
-    trackCount++;  // Counter for debug purposes
+    auto pvector = fitresult->getMomentum();
 
-    auto track_momentum = fitresult->getMomentum().Mag2();
-    auto track_eta = fitresult->getMomentum().Eta();
-    auto track_theta = fitresult->getMomentum().Theta();
-    //B2INFO("Track Data" << LogVar("track momentum", track_momentum) << LogVar("track eta", track_eta));
+    auto track_momentum  =   pvector.R();
+    auto track_eta       =   pvector.Eta();
+    auto track_theta     =   pvector.Theta();
+    auto track_phi       =   pvector.Phi();
 
     // Skip low momentum tracks (like bhabhas)
     if (track_momentum < 4) continue;
 
-    unsigned int cdc_hit_count = track->getNumberOfCDCHits();
+    unsigned int cdc_hit_count  = track->getNumberOfCDCHits();
     unsigned int bklm_hit_count = track->getNumberOfBKLMHits();
     unsigned int eklm_hit_count = track->getNumberOfEKLMHits();
 
     unsigned int klm_total_hits = bklm_hit_count + eklm_hit_count;
 
+
     // Track must have hits in both CDC and KLM to be logged
     if (cdc_hit_count == 0) continue;
     if (klm_total_hits == 0) continue;
 
-    m_klmcdc_eta->Fill(track_eta, klm_total_hits);
-    m_klmcdc_theta->Fill(track_theta, klm_total_hits);
+
+    /**
+     * Fill Plots with combined hit counts and exclusively barrel counts, representing each coord
+     * */ 
+
+    m_klmcdc_eta     ->  Fill(track_eta, klm_total_hits);
+    m_klmcdc_theta   ->  Fill(track_theta, klm_total_hits);
+    m_klmcdc_phi     ->  Fill(track_phi, klm_total_hits);
+
+    m_klmcdc_b_eta   ->  Fill(track_eta, bklm_hit_count);
+    m_klmcdc_b_theta ->  Fill(track_theta, bklm_hit_count);
+    m_klmcdc_b_phi   ->  Fill(track_phi, bklm_hit_count);
+
   }
-  B2INFO("Track Count" << LogVar("Track Count", trackCount));
 }
 
 void KLMCDCTrackModule::endRun()
 {
-  //m_klmcdc_eta->Draw("HIST");
 }
 
 void KLMCDCTrackModule::terminate()
