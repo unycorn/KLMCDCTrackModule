@@ -1,11 +1,3 @@
-/**************************************************************************
- * basf2 (Belle II Analysis Software Framework)                           *
- * Author: The Belle II Collaboration                                     *
- *                                                                        *
- * See git log for contributors and copyright holders.                    *
- * This file is licensed under LGPL-3.0, see LICENSE.md.                  *
- **************************************************************************/
-
 #pragma once
 
 /* KLM headers. */
@@ -95,11 +87,15 @@ namespace Belle2 {
     void terminate() override;
 
   private:
-    /* Number of hits from CDC track by eta */
+    /* Number of hits from CDC track by eta,theta,phi */
     TProfile* m_klmcdc_eta;
-
-    /* Number of hits from CDC track by theta */
     TProfile* m_klmcdc_theta;
+    TProfile* m_klmcdc_phi;
+
+    /* Same but just for the barrel */
+    TProfile* m_klmcdc_b_eta;
+    TProfile* m_klmcdc_b_theta;
+    TProfile* m_klmcdc_b_phi;
 
     /** Directory for KLM DQM histograms in ROOT file. */
     std::string m_HistogramDirectoryName;
