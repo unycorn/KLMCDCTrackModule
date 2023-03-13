@@ -1,3 +1,11 @@
+/**************************************************************************
+ * basf2 (Belle II Analysis Software Framework)                           *
+ * Author: The Belle II Collaboration                                     *
+ *                                                                        *
+ * See git log for contributors and copyright holders.                    *
+ * This file is licensed under LGPL-3.0, see LICENSE.md.                  *
+ **************************************************************************/
+
 #pragma once
 
 /* KLM headers. */
@@ -9,6 +17,7 @@
 #include <klm/dataobjects/KLMChannelArrayIndex.h>
 #include <klm/dataobjects/KLMElementNumbers.h>
 #include <klm/dataobjects/KLMSectorArrayIndex.h>
+#include <klm/bklm/geometry/GeometryPar.h>
 
 /* Belle 2 headers. */
 #include <framework/core/HistoModule.h>
@@ -19,6 +28,12 @@
 #include <mdst/dataobjects/Track.h>
 #include <mdst/dataobjects/TrackFitResult.h>
 #include <tracking/dataobjects/RecoTrack.h>
+
+#include <tracking/trackFindingCDC/eventdata/tracks/CDCTrack.h>
+#include <tracking/trackFindingCDC/rootification/StoreWrappedObjPtr.h>
+#include <tracking/trackFindingCDC/topology/CDCWire.h>
+
+#include <klm/dataobjects/bklm/BKLMTrack.h>
 
 #include <cdc/dataobjects/CDCHit.h>
 #include <cdc/dataobjects/CDCRawHit.h>
@@ -42,6 +57,12 @@ namespace Belle2 {
     StoreArray<Track> m_Tracks;                   /**< Tracks. */
     StoreArray<RecoTrack> m_RecoTracks;           /**< RecoTracks. */
     std::string m_recoTrackArrayName = "" ;       /**< Belle2::RecoTrack StoreArray name. */
+
+    //! BKLMTrack StoreArray
+    StoreArray<BKLMTrack> m_storeTracks;
+
+    /// Store Array of the input tracks
+    StoreArray<RecoTrack> m_cdcRecoTracks;
 
 
   public:
@@ -87,6 +108,11 @@ namespace Belle2 {
     void terminate() override;
 
   private:
+    //! bklm GeometryPar
+    bklm::GeometryPar* m_GeoPar = nullptr;
+
+    StoreObjPtr<EventMetaData> m_event_metadata;
+
     /* Number of hits from CDC track by eta,theta,phi */
     TProfile* m_klmcdc_eta;
     TProfile* m_klmcdc_theta;
@@ -96,6 +122,15 @@ namespace Belle2 {
     TProfile* m_klmcdc_b_eta;
     TProfile* m_klmcdc_b_theta;
     TProfile* m_klmcdc_b_phi;
+    TH1F* m_phicounter;
+    TProfile* m_BKLM_hits_mom;
+    TProfile* m_BKLM_mom_phi;
+
+    /* Same but just for the endcap */
+    TProfile* m_klmcdc_e_eta;
+    TProfile* m_klmcdc_e_theta;
+    TProfile* m_klmcdc_e_phi;
+
 
     /** Directory for KLM DQM histograms in ROOT file. */
     std::string m_HistogramDirectoryName;
