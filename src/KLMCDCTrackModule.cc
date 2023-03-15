@@ -21,12 +21,15 @@
 #include <TDirectory.h>
 
 #include <iostream>
+#include <cmath>
 
+#define Pi 3.14159265358979323846
 
 
 using namespace Belle2;
 using namespace genfit;
 using namespace TrackFindingCDC;
+using namespace std;
 
 
 REG_MODULE(KLMCDCTrack);
@@ -36,6 +39,8 @@ KLMCDCTrackModule::KLMCDCTrackModule() :
   m_klmcdc_eta{nullptr},
   m_klmcdc_theta{nullptr},
   m_klmcdc_phi{nullptr},
+  m_bklm2d{nullptr},
+  m_bklm2d_momcap{nullptr},
   m_klmcdc_b_eta{nullptr},
   m_klmcdc_b_theta{nullptr},
   m_klmcdc_b_phi{nullptr},
@@ -67,49 +72,68 @@ void KLMCDCTrackModule::defineHisto()
   int resolution = 100;
 
   /* KLM General Related. */
-  /* Number of hits by Eta. */
-  m_klmcdc_eta = new TProfile("KLM_CDC_tracks_by_eta",
-                               "Mean KLM Hits per CDC track vs. #eta",
-                               resolution, -3.142, 3.142);
-  m_klmcdc_eta->GetXaxis()->SetTitle("Angle #eta");
-  m_klmcdc_eta->GetYaxis()->SetTitle("Mean hits (EKLM + BKLM)");
+
+  m_bklm2d = new TProfile2D("bklm_2d", "BKLM Efficiency by phi and theta",
+                            40, -3.142, 3.142,
+                            40, 0.64, 2.27);
+  m_bklm2d->GetXaxis()->SetTitle("Angle #phi");
+  m_bklm2d->GetYaxis()->SetTitle("Angle #theta");
+
+  m_bklm2d_momcap = new TProfile2D("bklm_2d_momcap", "BKLM Efficiency by phi and theta",
+                            40, -3.142, 3.142,
+                            40, 0.64, 2.27);
+  m_bklm2d_momcap->GetXaxis()->SetTitle("Angle #phi");
+  m_bklm2d_momcap->GetYaxis()->SetTitle("Angle #theta");
 
   /* Number of hits by Eta. */
-  m_klmcdc_theta = new TProfile("KLM_CDC_tracks_by_theta",
+  m_klmcdc_eta = new TProfile("bklm_eta_mcap",
+                               "Mean KLM Hits per CDC track vs. #eta",
+                               resolution, -3.142, 3.142, 0, 1);
+  m_klmcdc_eta->GetXaxis()->SetTitle("Angle #eta");
+  m_klmcdc_eta->GetYaxis()->SetTitle("Efficiency");
+  m_klmcdc_eta->GetYaxis()->SetRange(0.0,1.0);
+
+  /* Number of hits by Eta. */
+  m_klmcdc_theta = new TProfile("bklm_theta_mcap",
                                "Mean KLM Hits per CDC track vs. #theta",
-                               resolution, 0, 3.142*2);
+                               resolution, 0.64, 2.27, 0, 1);
   m_klmcdc_theta->GetXaxis()->SetTitle("Angle #theta");
-  m_klmcdc_theta->GetYaxis()->SetTitle("Mean hits (EKLM + BKLM)");
+  m_klmcdc_theta->GetYaxis()->SetTitle("Efficiency");
+  m_klmcdc_theta->GetYaxis()->SetRange(0.0,1.0);
   
   
   /* Number of hits by Phi. */
-  m_klmcdc_phi = new TProfile("KLM_CDC_tracks_by_phi",
+  m_klmcdc_phi = new TProfile("bklm_phi_mcap",
                                "Mean KLM Hits per CDC track vs. #phi",
-                               resolution, -3.142, 3.142);
+                               resolution, -3.142, 3.142, 0, 1);
   m_klmcdc_phi->GetXaxis()->SetTitle("Angle #phi");
-  m_klmcdc_phi->GetYaxis()->SetTitle("Mean hits (EKLM + BKLM)");
+  m_klmcdc_phi->GetYaxis()->SetTitle("Efficiency");
+  m_klmcdc_phi->GetYaxis()->SetRange(0.0,1.0);
 
   /* JUST BKLM */
   /* Number of BKLM hits by Eta. */
-  m_klmcdc_b_eta = new TProfile("BKLM_CDC_tracks_by_eta",
+  m_klmcdc_b_eta = new TProfile("bklm_eta",
                                "Mean BKLM Hits per CDC track vs. #eta",
-                               resolution, -3.142, 3.142);
+                               resolution, -3.142, 3.142, 0, 1);
   m_klmcdc_b_eta->GetXaxis()->SetTitle("Angle #eta");
   m_klmcdc_b_eta->GetYaxis()->SetTitle("Mean hits (BKLM)");
+  m_klmcdc_b_eta->GetYaxis()->SetRange(0.0,1.0);
 
   /* Number of BKLM hits by Eta. */
-  m_klmcdc_b_theta = new TProfile("BKLM_CDC_tracks_by_theta",
+  m_klmcdc_b_theta = new TProfile("bklm_theta",
                                "Mean BKLM Hits per CDC track vs. #theta",
-                               resolution, 0, 3.142*2);
+                               resolution, 0.64, 2.27, 0, 1);
   m_klmcdc_b_theta->GetXaxis()->SetTitle("Angle #theta");
   m_klmcdc_b_theta->GetYaxis()->SetTitle("Mean hits (BKLM)");
+  m_klmcdc_b_theta->GetYaxis()->SetRange(0.0,1.0);
   
   /* Number of BKLM hits by Phi. */
-  m_klmcdc_b_phi = new TProfile("BKLM_CDC_tracks_by_phi",
+  m_klmcdc_b_phi = new TProfile("bklm_phi",
                                "Mean BKLM Hits per CDC track vs. #phi",
-                               resolution, -3.142, 3.142);
+                               resolution, -3.142, 3.142, 0, 1);
   m_klmcdc_b_phi->GetXaxis()->SetTitle("Angle #phi");
   m_klmcdc_b_phi->GetYaxis()->SetTitle("Mean hits (BKLM)");
+  m_klmcdc_b_phi->GetYaxis()->SetRange(0.0,1.0);
 
   /* Number of matched tracks by phi */
   m_phicounter = new TH1F("phicounter",
@@ -145,7 +169,7 @@ void KLMCDCTrackModule::defineHisto()
   /* Number of BKLM hits by Eta. */
   m_klmcdc_e_theta = new TProfile("EKLM_CDC_tracks_by_theta",
                                "Mean EKLM Hits per CDC track vs. #theta",
-                               resolution, 0, 3.142*2);
+                               resolution, 0, 3.142);
   m_klmcdc_e_theta->GetXaxis()->SetTitle("Angle #theta");
   m_klmcdc_e_theta->GetYaxis()->SetTitle("Mean hits (EKLM)");
   
@@ -164,6 +188,8 @@ void KLMCDCTrackModule::initialize()
 
 void KLMCDCTrackModule::beginRun()
 {
+  m_bklm2d->Reset();
+  m_bklm2d_momcap->Reset();
   m_klmcdc_eta->Reset();
   m_klmcdc_theta->Reset();
   m_klmcdc_phi->Reset();
@@ -178,15 +204,30 @@ void KLMCDCTrackModule::beginRun()
   m_klmcdc_e_phi->Reset();
 }
 
+
+
 void KLMCDCTrackModule::event()
 {
-  //m_GeoPar = bklm::GeometryPar::instance();
-  //DBObjPtr<BKLMGeometryPar> GeoPar;
-  //m_GeoPar = bklm::GeometryPar::instance(*GeoPar);
-
-  //B2INFO("Layer radius 0 " << m_GeometryBKLM->getLayerInnerRadius(0));
-  //B2INFO("Layer radius 14" << m_GeometryBKLM->getLayerInnerRadius(14));
-  //B2INFO("module length" << m_GeometryBKLM->getModuleLength());
+  
+  double layerInnerRadii[] = {201.900000,
+                              209.964450,
+                              219.064450,
+                              228.164450,
+                              237.264450,
+                              246.364450,
+                              255.464450,
+                              264.564450,
+                              273.664450,
+                              282.764450,
+                              291.864450,
+                              300.964450,
+                              310.064450,
+                              319.164450,
+                              328.264450
+                              };
+  
+  double min_z = -180.0;
+  double max_z = 275.0;
 
   for (const auto& b2track : m_Tracks) {
 
@@ -204,10 +245,35 @@ void KLMCDCTrackModule::event()
 
     auto pvector = fitresult->getMomentum();
 
-    auto track_momentum  =   pvector.R();
+    auto track_momentum  =   pvector.Mag();
     auto track_eta       =   pvector.Eta();
     auto track_theta     =   pvector.Theta();
     auto track_phi       =   pvector.Phi();
+
+    /**
+     * Determine number of barrel layers track could cross by
+     * modulating phi to take advantage of octagonal symmetry,
+     * projecting onto plane and determining if intersection
+     * point is within bounds of the detector
+     * */ 
+
+    double modphi = abs(fmod(track_phi, (Pi / 4)));
+    if (modphi > Pi/8)  modphi -= (Pi / 4) ;
+
+    double r_max, r_min;
+    int layers_denom = 0;
+    for (const auto& R : layerInnerRadii) {
+      r_max = max_z * cos(modphi) * tan(track_theta);
+      r_min = min_z * cos(modphi) * tan(track_theta);
+
+      if (r_min > r_max) swap(r_min, r_max);
+
+      if(R < r_max && R > r_min) {
+        layers_denom++;
+      } else {
+        break;
+      }
+    }
 
     unsigned int cdc_hit_count  = track->getNumberOfCDCHits();
     unsigned int bklm_hit_count = track->getNumberOfBKLMHits();
@@ -219,6 +285,15 @@ void KLMCDCTrackModule::event()
     if (cdc_hit_count == 0) continue;
     if (klm_total_hits == 0) continue;
 
+    if (bklm_hit_count > layers_denom) {
+      B2INFO("Barrel Layer Info" << LogVar("theta", track_theta) << LogVar("phi", track_phi)
+            << LogVar("layer count", layers_denom) << LogVar("bklmHits", bklm_hit_count));
+      // Extremely rarely (1 in 10,000), a plane will be hit that is techinically impossible for the given phi/theta
+      // these really close edge cases when graphed but the following fixes it
+      layers_denom = bklm_hit_count;
+    }
+
+
     m_BKLM_hits_mom  ->  Fill(track_momentum, bklm_hit_count);
     m_BKLM_mom_phi   ->  Fill(track_phi, track_momentum);
     // Skip low momentum tracks (like bhabhas)
@@ -226,26 +301,36 @@ void KLMCDCTrackModule::event()
     //if (track_momentum > 9) continue;
 
     /**
-     * Fill Plots with combined hit counts and exclusively barrel counts, representing each coord
+     * Fill Plots for barrel and endcap
      * */ 
 
     if(bklm_hit_count > 0) {
-      m_klmcdc_b_eta   ->  Fill(track_eta, bklm_hit_count);
-      m_klmcdc_b_theta ->  Fill(track_theta, bklm_hit_count);
-      m_klmcdc_b_phi   ->  Fill(track_phi, bklm_hit_count);
+
+      if (layers_denom == 0) break;
+      
+      double efficiency = (double)bklm_hit_count/(double)layers_denom;
+      B2INFO(LogVar("EFFICIENCY", efficiency));
+
+      m_bklm2d         ->  Fill(track_phi, track_theta, efficiency);
+
+      m_klmcdc_b_eta   ->  Fill(track_eta, efficiency);
+      m_klmcdc_b_theta ->  Fill(track_theta, efficiency);
+      m_klmcdc_b_phi   ->  Fill(track_phi, efficiency);
       m_phicounter     ->  Fill(track_phi, 1);
+
+      if (track_momentum > 4.7) {
+        m_bklm2d_momcap->  Fill(track_phi, track_theta, efficiency);
+
+        m_klmcdc_eta   ->  Fill(track_eta, efficiency);
+        m_klmcdc_theta ->  Fill(track_theta, efficiency);
+        m_klmcdc_phi   ->  Fill(track_phi, efficiency);
+      }
     }
+
     if(eklm_hit_count > 0) {
       m_klmcdc_e_eta   ->  Fill(track_eta, eklm_hit_count);
       m_klmcdc_e_theta ->  Fill(track_theta, eklm_hit_count);
       m_klmcdc_e_phi   ->  Fill(track_phi, eklm_hit_count);
-    }
-
-    if (track_momentum < 4.7) continue;
-    if(bklm_hit_count > 0) {
-      m_klmcdc_eta     ->  Fill(track_eta, bklm_hit_count);
-      m_klmcdc_theta   ->  Fill(track_theta, bklm_hit_count);
-      m_klmcdc_phi     ->  Fill(track_phi, bklm_hit_count);
     }
   }
 }
