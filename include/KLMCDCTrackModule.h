@@ -12,7 +12,7 @@
 #include <klm/dataobjects/bklm/BKLMElementNumbers.h>
 #include <klm/dataobjects/bklm/BKLMHit1d.h>
 #include <klm/dataobjects/eklm/EKLMElementNumbers.h>
-#include <klm/dataobjects/KLMHit2d.h>
+//#include <klm/dataobjects/KLMHit2d.h>
 #include <klm/dataobjects/KLMDigit.h>
 #include <klm/dataobjects/KLMChannelArrayIndex.h>
 #include <klm/dataobjects/KLMElementNumbers.h>
@@ -44,6 +44,7 @@
 #include <TH1F.h>
 #include <TH2F.h>
 #include <TProfile.h>
+#include <TProfile2D.h>
 
 namespace Belle2 {
 
@@ -125,6 +126,9 @@ namespace Belle2 {
     TH1F* m_phicounter;
     TProfile* m_BKLM_hits_mom;
     TProfile* m_BKLM_mom_phi;
+
+    TProfile2D* m_bklm2d;
+    TProfile2D* m_bklm2d_momcap;
 
     /* Same but just for the endcap */
     TProfile* m_klmcdc_e_eta;
